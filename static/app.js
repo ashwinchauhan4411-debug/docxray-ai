@@ -25,6 +25,7 @@ function setStatus(message) {
 
 function setQuestion(question) {
     const input = $("question");
+
     if (input) {
         input.value = question;
         input.focus();
@@ -34,70 +35,49 @@ function setQuestion(question) {
 }
 
 /* =========================
-   SIDEBAR NAVIGATION
+   NAVIGATION
 ========================= */
 
 function showSection(targetId) {
-
-    const target = document.getElementById(targetId);
+    const target = $(targetId);
 
     if (!target) {
         console.warn("Section not found:", targetId);
         return;
     }
 
-    // Remove active state from all sidebar buttons
     document.querySelectorAll(".nav").forEach((button) => {
         button.classList.remove("active");
-    });
 
-    // Find clicked button based on onclick target
-    document.querySelectorAll(".nav").forEach((button) => {
-        const text = button.textContent.trim().toLowerCase();
-
-        if (
-            (targetId === "overview" && text.includes("overview")) ||
-            (targetId === "documents" && text.includes("documents")) ||
-            (targetId === "investigation" && text.includes("investigation")) ||
-            (targetId === "history" && text.includes("history"))
-        ) {
+        if (button.dataset.target === targetId) {
             button.classList.add("active");
         }
     });
 
-    // Scroll to section
     target.scrollIntoView({
         behavior: "smooth",
         block: "start"
     });
 }
 
-
-/* Sidebar buttons */
-document.querySelectorAll(".nav").forEach((button) => {
-    button.addEventListener("click", function (event) {
-        event.preventDefault();
-
-        const target = this.dataset.target;
-
-        if (target) {
-            showSection(target);
-        }
-    });
-});
+window.showSection = showSection;
+window.setQuestion = setQuestion;
 
 /* =========================
-   QUICK QUESTION BUTTONS
+   QUICK QUESTIONS
 ========================= */
 
 document.querySelectorAll(".quick-action").forEach((button) => {
+
     button.addEventListener("click", () => {
+
         const question = button.dataset.question;
 
         if (question) {
             setQuestion(question);
         }
     });
+
 });
 
 /* =========================
@@ -105,7 +85,9 @@ document.querySelectorAll(".quick-action").forEach((button) => {
 ========================= */
 
 async function refresh() {
+
     try {
+
         const response = await fetch("/api/documents");
 
         if (!response.ok) {
@@ -114,7 +96,9 @@ async function refresh() {
 
         const data = await response.json();
 
-        currentDocuments = data.documents || data || [];
+        currentDocuments = Array.isArray(data.documents)
+            ? data.documents
+            : [];
 
         renderDocuments(currentDocuments);
 
@@ -125,21 +109,26 @@ async function refresh() {
         }
 
     } catch (error) {
+
         console.error("Document refresh error:", error);
+
+        currentDocuments = [];
+
         renderDocuments([]);
     }
 }
+
 
 function renderDocuments(documents) {
 
     const container = $("docs");
 
     if (!container) {
-        console.warn("documentsList not found");
+        console.warn("Element #docs not found");
         return;
     }
 
-    if (!documents || documents.length === 0) {
+    if (!documents.length) {
 
         container.innerHTML = `
             <div class="empty">
@@ -161,7 +150,13 @@ function renderDocuments(documents) {
 
         const safeName = escapeHtml(name);
 
-        const encodedName = encodeURIComponent(name);
+        const encodedName =
+            encodeURIComponent(name);
+
+        const pages =
+            doc.pages
+                ? `${doc.pages} page${doc.pages > 1 ? "s" : ""}`
+                : "PDF document";
 
         return `
             <div class="doc">
@@ -172,7 +167,7 @@ function renderDocuments(documents) {
 
                 <div class="doc-meta">
                     <strong>${safeName}</strong>
-                    <span>PDF document</span>
+                    <span>${pages}</span>
                 </div>
 
                 <div class="doc-check">
@@ -204,25 +199,28 @@ if (documentSearch) {
 
     documentSearch.addEventListener("input", () => {
 
-        const query = documentSearch.value
-            .toLowerCase()
-            .trim();
+        const query =
+            documentSearch.value
+                .toLowerCase()
+                .trim();
 
         if (!query) {
             renderDocuments(currentDocuments);
             return;
         }
 
-        const filtered = currentDocuments.filter((doc) => {
+        const filtered =
+            currentDocuments.filter((doc) => {
 
-            const name =
-                typeof doc === "string"
-                    ? doc
-                    : doc.filename || doc.name || "";
+                const name =
+                    typeof doc === "string"
+                        ? doc
+                        : doc.filename || doc.name || "";
 
-            return name.toLowerCase().includes(query);
-
-        });
+                return name
+                    .toLowerCase()
+                    .includes(query);
+            });
 
         renderDocuments(filtered);
     });
@@ -234,11 +232,13 @@ if (documentSearch) {
 
 async function removeDocument(encodedFilename) {
 
-    const filename = decodeURIComponent(encodedFilename);
+    const filename =
+        decodeURIComponent(encodedFilename);
 
-    const confirmed = confirm(
-        `Remove "${filename}" from the workspace?`
-    );
+    const confirmed =
+        confirm(
+            `Remove "${filename}" from the workspace?`
+        );
 
     if (!confirmed) {
         return;
@@ -246,18 +246,24 @@ async function removeDocument(encodedFilename) {
 
     try {
 
-        const response = await fetch(
-            `/api/documents/${encodeURIComponent(filename)}`,
-            {
-                method: "DELETE"
-            }
-        );
+        const response =
+            await fetch(
+                `/api/documents/${encodeURIComponent(filename)}`,
+                {
+                    method: "DELETE"
+                }
+            );
 
-        const data = await response.json().catch(() => ({}));
+        const data =
+            await response
+                .json()
+                .catch(() => ({}));
 
         if (!response.ok) {
+
             throw new Error(
-                data.detail || "Could not remove document"
+                data.detail ||
+                "Could not remove document"
             );
         }
 
@@ -267,7 +273,10 @@ async function removeDocument(encodedFilename) {
 
     } catch (error) {
 
-        console.error("Remove document error:", error);
+        console.error(
+            "Remove document error:",
+            error
+        );
 
         alert(
             "Could not remove the document.\n\n" +
@@ -276,36 +285,54 @@ async function removeDocument(encodedFilename) {
     }
 }
 
-/* =========================
-   UPLOAD
-========================= */
+window.removeDocument = removeDocument;
+
 /* =========================
    UPLOAD
 ========================= */
 
 const fileInput = $("files");
-const uploadButton = $("uploadBtn");
-const dropzone = $("dropzone");
-const selectedFiles = $("selectedFiles");
+
+const uploadButton =
+    $("uploadBtn");
+
+const dropzone =
+    $("dropzone");
+
+const selectedFiles =
+    $("selectedFiles");
+
 
 if (fileInput) {
 
-    fileInput.addEventListener("change", () => {
+    fileInput.addEventListener(
+        "change",
+        () => {
 
-        const files = Array.from(fileInput.files || []);
+            const files =
+                Array.from(
+                    fileInput.files || []
+                );
 
-        if (!selectedFiles) return;
+            if (!selectedFiles) {
+                return;
+            }
 
-        if (files.length === 0) {
-            selectedFiles.textContent = "No files selected";
-            return;
+            if (!files.length) {
+
+                selectedFiles.textContent =
+                    "No files selected";
+
+                return;
+            }
+
+            selectedFiles.textContent =
+                files
+                    .map(file => file.name)
+                    .join(", ");
         }
-
-        selectedFiles.textContent =
-            files.map(file => file.name).join(", ");
-    });
+    );
 }
-
 
 /* =========================
    DRAG AND DROP
@@ -313,71 +340,101 @@ if (fileInput) {
 
 if (dropzone) {
 
-    ["dragenter", "dragover"].forEach(eventName => {
+    ["dragenter", "dragover"]
+        .forEach(eventName => {
 
-        dropzone.addEventListener(eventName, (event) => {
+            dropzone.addEventListener(
+                eventName,
+                (event) => {
 
-            event.preventDefault();
-            dropzone.classList.add("drag");
+                    event.preventDefault();
 
+                    dropzone.classList.add(
+                        "drag"
+                    );
+                }
+            );
         });
 
-    });
 
+    ["dragleave", "drop"]
+        .forEach(eventName => {
 
-    ["dragleave", "drop"].forEach(eventName => {
+            dropzone.addEventListener(
+                eventName,
+                (event) => {
 
-        dropzone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
 
-            event.preventDefault();
-            dropzone.classList.remove("drag");
-
+                    dropzone.classList.remove(
+                        "drag"
+                    );
+                }
+            );
         });
 
-    });
 
+    dropzone.addEventListener(
+        "drop",
+        (event) => {
 
-    dropzone.addEventListener("drop", (event) => {
+            const files =
+                Array.from(
+                    event.dataTransfer.files || []
+                );
 
-        const files = Array.from(
-            event.dataTransfer.files || []
-        );
+            const pdfFiles =
+                files.filter(
+                    file =>
+                        file.type ===
+                            "application/pdf" ||
+                        file.name
+                            .toLowerCase()
+                            .endsWith(".pdf")
+                );
 
-        const pdfFiles = files.filter(
-            file =>
-                file.type === "application/pdf" ||
-                file.name.toLowerCase().endsWith(".pdf")
-        );
-
-        if (!fileInput || !pdfFiles.length) {
-            return;
-        }
-
-        try {
-
-            const dataTransfer = new DataTransfer();
-
-            pdfFiles.forEach(file => {
-                dataTransfer.items.add(file);
-            });
-
-            fileInput.files = dataTransfer.files;
-
-            if (selectedFiles) {
-                selectedFiles.textContent =
-                    pdfFiles.map(file => file.name).join(", ");
+            if (
+                !fileInput ||
+                !pdfFiles.length
+            ) {
+                return;
             }
 
-        } catch (error) {
+            try {
 
-            console.error("Drop error:", error);
+                const dataTransfer =
+                    new DataTransfer();
 
+                pdfFiles.forEach(file => {
+
+                    dataTransfer.items.add(
+                        file
+                    );
+                });
+
+                fileInput.files =
+                    dataTransfer.files;
+
+                if (selectedFiles) {
+
+                    selectedFiles.textContent =
+                        pdfFiles
+                            .map(
+                                file => file.name
+                            )
+                            .join(", ");
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "Drop error:",
+                    error
+                );
+            }
         }
-
-    });
-
+    );
 }
-
 
 /* =========================
    PROCESS DOCUMENTS
@@ -385,151 +442,221 @@ if (dropzone) {
 
 if (uploadButton) {
 
-    uploadButton.addEventListener("click", async () => {
+    uploadButton.addEventListener(
+        "click",
+        async () => {
 
-        if (!fileInput || !fileInput.files.length) {
+            if (
+                !fileInput ||
+                !fileInput.files.length
+            ) {
 
-            alert("Please select at least one PDF.");
-
-            return;
-        }
-
-        const files = Array.from(fileInput.files);
-
-        setStatus("Processing documents...");
-
-        uploadButton.disabled = true;
-
-        try {
-
-            for (const file of files) {
-
-                const formData = new FormData();
-
-                formData.append("files", file);
-
-                const response = await fetch(
-                    "/api/upload",
-                    {
-                        method: "POST",
-                        body: formData
-                    }
+                alert(
+                    "Please select at least one PDF."
                 );
 
-                const data =
-                    await response.json().catch(() => ({}));
-
-                if (!response.ok) {
-
-                 const errorMessage =
-    typeof data.detail === "string"
-        ? data.detail
-        : data.detail
-            ? JSON.stringify(data.detail)
-            : `Failed to upload ${file.name}`;
-
-throw new Error(errorMessage);
-                }
-
+                return;
             }
 
+            const files =
+                Array.from(
+                    fileInput.files
+                );
 
-            await refresh();
-
-            setStatus("Documents processed successfully");
-
-            fileInput.value = "";
-
-            if (selectedFiles) {
-                selectedFiles.textContent = "No files selected";
-            }
-
-            alert("Documents uploaded successfully!");
-
-        } catch (error) {
-
-            console.error("Upload error:", error);
-
-            setStatus("Upload failed");
-
-            alert(
-                "Upload failed.\n\n" +
-                error.message
+            setStatus(
+                "Processing documents..."
             );
 
-        } finally {
+            uploadButton.disabled = true;
 
-            uploadButton.disabled = false;
+            try {
 
+                for (const file of files) {
+
+                    const formData =
+                        new FormData();
+
+                    formData.append(
+                        "files",
+                        file
+                    );
+
+                    const response =
+                        await fetch(
+                            "/api/upload",
+                            {
+                                method: "POST",
+                                body: formData
+                            }
+                        );
+
+                    const data =
+                        await response
+                            .json()
+                            .catch(
+                                () => ({})
+                            );
+
+                    if (!response.ok) {
+
+                        const errorMessage =
+                            typeof data.detail ===
+                            "string"
+                                ? data.detail
+                                : data.detail
+                                    ? JSON.stringify(
+                                        data.detail
+                                    )
+                                    : `Failed to upload ${file.name}`;
+
+                        throw new Error(
+                            errorMessage
+                        );
+                    }
+                }
+
+                await refresh();
+
+                setStatus(
+                    "Documents processed successfully"
+                );
+
+                fileInput.value = "";
+
+                if (selectedFiles) {
+
+                    selectedFiles.textContent =
+                        "No files selected";
+                }
+
+                alert(
+                    "Documents uploaded successfully!"
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Upload error:",
+                    error
+                );
+
+                setStatus(
+                    "Upload failed"
+                );
+
+                alert(
+                    "Upload failed.\n\n" +
+                    error.message
+                );
+
+            } finally {
+
+                uploadButton.disabled = false;
+            }
         }
-
-    });
-
+    );
 }
+
 /* =========================
    INVESTIGATION
 ========================= */
 
-const askButton = $("askBtn");
+/*
+IMPORTANT:
+HTML uses id="askBtn"
+NOT id="askButton"
+*/
+
+const askButton =
+    $("askBtn");
 
 if (askButton) {
 
-    askButton.addEventListener("click", askQuestion);
+    askButton.addEventListener(
+        "click",
+        askQuestion
+    );
 }
+
+
+/* =========================
+   ASK QUESTION
+========================= */
 
 async function askQuestion() {
 
-    const questionInput = $("question");
+    const questionInput =
+        $("question");
 
     if (!questionInput) {
+
+        alert(
+            "Question input not found."
+        );
+
         return;
     }
 
-    const question = questionInput.value.trim();
+    const question =
+        questionInput.value.trim();
 
     if (!question) {
 
-        alert("Please enter a question.");
+        alert(
+            "Please enter a question."
+        );
 
         questionInput.focus();
 
         return;
     }
 
-    showSection("investigation");
+    showSection(
+        "investigation"
+    );
 
-    setStatus("Investigating...");
+    setStatus(
+        "Investigating..."
+    );
 
-    const answerContainer = $("result");
+    const resultContainer =
+        $("result");
 
-    if (answerContainer) {
+    if (resultContainer) {
 
-        answerContainer.innerHTML = `
+        resultContainer.innerHTML = `
             <div class="muted">
                 Investigating your documents...
             </div>
         `;
     }
 
+
     try {
 
-        const response = await fetch(
-            "/api/ask",
-            {
-                method: "POST",
+        const response =
+            await fetch(
+                "/api/ask",
+                {
+                    method: "POST",
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                body: JSON.stringify({
-                    question: question
-                })
-            }
-        );
+                    body: JSON.stringify({
+                        question: question
+                    })
+                }
+            );
+
 
         const data =
-            await response.json().catch(() => null);
+            await response
+                .json()
+                .catch(() => null);
+
 
         if (!response.ok) {
 
@@ -540,346 +667,516 @@ async function askQuestion() {
             );
         }
 
+
         if (!data) {
-            throw new Error("No response received from server");
+
+            throw new Error(
+                "No response received from server"
+            );
         }
 
-        renderInvestigation(data);
 
-        saveHistory(question, data);
+        /*
+        BACKEND RESPONSE:
 
-        setStatus("Investigation complete");
+        {
+            "success": true,
+            "result": {
+                "answer": "...",
+                "sources": [],
+                "conflict": {},
+                "uncertainty": {}
+            }
+        }
+        */
+
+        const result =
+            data.result || data;
+
+
+        renderInvestigation(
+            result
+        );
+
+
+        saveHistory(
+            question,
+            result
+        );
+
+
+        setStatus(
+            "Investigation complete"
+        );
+
 
     } catch (error) {
 
-        console.error("Investigation error:", error);
+        console.error(
+            "Investigation error:",
+            error
+        );
 
-        setStatus("Investigation failed");
+        setStatus(
+            "Investigation failed"
+        );
 
-        if (answerContainer) {
+        if (resultContainer) {
 
-            answerContainer.innerHTML = `
+            resultContainer.innerHTML = `
                 <div class="warn">
-                    <strong>Investigation failed</strong>
-                    <p>${escapeHtml(error.message)}</p>
+
+                    <strong>
+                        Investigation failed
+                    </strong>
+
+                    <p>
+                        ${escapeHtml(
+                            error.message
+                        )}
+                    </p>
+
                     <span>
-                        Make sure the server is running and documents have been uploaded.
+                        Make sure documents have been uploaded and try again.
                     </span>
+
                 </div>
             `;
         }
     }
 }
+
 
 /* =========================
    RENDER INVESTIGATION
 ========================= */
 
-function renderInvestigation(data) {
+function renderInvestigation(
+    result
+) {
 
-    const answerContainer = $("result");
+    const container =
+        $("result");
 
-    if (!answerContainer) {
+    if (!container) {
+
+        console.warn(
+            "Element #result not found"
+        );
+
         return;
     }
 
+
     const answer =
-        data.answer ||
-        data.result ||
+        result?.answer ||
         "No answer returned.";
 
-    answerContainer.innerHTML = `
-        <div class="answer-title">
-            ✦ INVESTIGATOR ANSWER
-        </div>
 
-        <div class="answer-body">
-            ${formatAnswer(answer)}
-        </div>
+    const sources =
+        Array.isArray(
+            result?.sources
+        )
+            ? result.sources
+            : [];
+
+
+    const conflict =
+        result?.conflict;
+
+
+    const uncertainty =
+        result?.uncertainty;
+
+
+    let html = `
+
+        <div class="investigation-result">
+
+            <div class="answer-title">
+                ✦ INVESTIGATOR ANSWER
+            </div>
+
+            <div class="answer-body">
+                ${formatAnswer(answer)}
+            </div>
+
     `;
 
-    renderSources(data);
 
-    renderConflict(data);
+    /* =========================
+       SOURCES
+    ========================= */
 
-    renderUncertainty(data);
+    html += `
+
+        <div class="result-block">
+
+            <h4>
+                📄 Sources & Evidence
+            </h4>
+
+    `;
+
+
+    if (!sources.length) {
+
+        html += `
+
+            <div class="muted">
+                No matching evidence found.
+            </div>
+
+        `;
+
+    } else {
+
+        html +=
+            sources
+                .slice(0, 10)
+                .map(item => {
+
+                    const documentName =
+                        item?.doc ||
+                        item?.document ||
+                        item?.filename ||
+                        "Unknown document";
+
+
+                    const page =
+                        item?.page ||
+                        item?.page_number ||
+                        "?";
+
+
+                    const text =
+                        item?.text ||
+                        item?.content ||
+                        "";
+
+
+                    return `
+
+                        <div class="source">
+
+                            <b>
+                                ${escapeHtml(
+                                    documentName
+                                )}
+                            </b>
+
+                            <span>
+                                Page
+                                ${escapeHtml(page)}
+                            </span>
+
+                            ${
+                                text
+                                    ? `
+                                        <p>
+                                            ${escapeHtml(
+                                                text
+                                            )}
+                                        </p>
+                                      `
+                                    : ""
+                            }
+
+                        </div>
+
+                    `;
+
+                })
+                .join("");
+    }
+
+
+    html += `</div>`;
+
+
+    /* =========================
+       CONFLICT
+    ========================= */
+
+    if (conflict) {
+
+        const message =
+            typeof conflict === "string"
+                ? conflict
+                : conflict.message ||
+                  "Different values or statements were found across the uploaded documents.";
+
+
+        let conflictDetails = "";
+
+
+        if (
+            typeof conflict ===
+            "object"
+        ) {
+
+            const values =
+                conflict.values ||
+                conflict.amounts ||
+                [];
+
+
+            const documents =
+                conflict.documents ||
+                conflict.by_document ||
+                {};
+
+
+            if (values.length) {
+
+                conflictDetails += `
+
+                    <div class="conflict-values">
+
+                        ${values
+                            .map(
+                                value => `
+                                    <span>
+                                        ${escapeHtml(
+                                            value
+                                        )}
+                                    </span>
+                                `
+                            )
+                            .join("")}
+
+                    </div>
+
+                `;
+            }
+
+
+            if (
+                Object.keys(
+                    documents
+                ).length
+            ) {
+
+                conflictDetails += `
+
+                    <div class="conflict-documents">
+
+                        ${
+                            Object.entries(
+                                documents
+                            )
+                                .map(
+                                    ([doc, value]) => `
+                                        <div>
+                                            •
+                                            ${escapeHtml(
+                                                doc
+                                            )}
+                                            →
+                                            ${escapeHtml(
+                                                value
+                                            )}
+                                        </div>
+                                    `
+                                )
+                                .join("")
+                        }
+
+                    </div>
+
+                `;
+            }
+        }
+
+
+        html += `
+
+            <div class="result-block">
+
+                <div class="warn">
+
+                    <strong>
+                        ⚠ Conflict detected
+                    </strong>
+
+                    <p>
+                        ${escapeHtml(
+                            message
+                        )}
+                    </p>
+
+                    ${conflictDetails}
+
+                </div>
+
+            </div>
+
+        `;
+    }
+
+
+    /* =========================
+       UNCERTAINTY
+    ========================= */
+
+    if (uncertainty) {
+
+        const message =
+            typeof uncertainty === "string"
+                ? uncertainty
+                : uncertainty.message ||
+                  "The available evidence may be incomplete.";
+
+
+        html += `
+
+            <div class="result-block">
+
+                <div class="warn">
+
+                    <strong>
+                        ⚠ Uncertainty
+                    </strong>
+
+                    <p>
+                        ${escapeHtml(
+                            message
+                        )}
+                    </p>
+
+                </div>
+
+            </div>
+
+        `;
+    }
+
+
+    html += `</div>`;
+
+
+    container.innerHTML =
+        html;
 }
+
 
 /* =========================
    ANSWER FORMATTER
 ========================= */
 
-function formatAnswer(answer) {
+function formatAnswer(
+    answer
+) {
 
     if (!answer) {
+
         return "No answer returned.";
     }
 
-    const text = String(answer);
 
-    const lines = text
-        .split("\n")
-        .map(line => line.trim())
-        .filter(Boolean);
+    const lines =
+        String(answer)
+            .split("\n")
+            .map(
+                line =>
+                    line.trim()
+            )
+            .filter(Boolean);
+
 
     if (lines.length === 1) {
-        return `<p>${escapeHtml(lines[0])}</p>`;
-    }
-
-    return lines.map(line => {
-
-        if (
-            line.startsWith("•") ||
-            line.startsWith("-") ||
-            line.startsWith("*")
-        ) {
-
-            return `
-                <div class="answer-point">
-                    ${escapeHtml(line)}
-                </div>
-            `;
-        }
 
         return `
-            <p>${escapeHtml(line)}</p>
+            <p>
+                ${escapeHtml(
+                    lines[0]
+                )}
+            </p>
         `;
-
-    }).join("");
-}
-
-/* =========================
-   SOURCES
-========================= */
-
-function renderSources(data) {
-
-    const sourceContainer =
-        $("sources");
-
-    if (!sourceContainer) {
-        return;
     }
 
-    const results =
-        data.sources ||
-        data.evidence ||
-        data.results ||
-        [];
 
-    if (!Array.isArray(results) || results.length === 0) {
+    return lines
+        .map(line => {
 
-        sourceContainer.innerHTML = `
-            <div class="muted">
-                No matching evidence found.
-            </div>
-        `;
+            if (
+                line.startsWith("•") ||
+                line.startsWith("-") ||
+                line.startsWith("*")
+            ) {
 
-        return;
-    }
+                return `
 
-    sourceContainer.innerHTML = results
-        .slice(0, 10)
-        .map(item => {
+                    <div class="answer-point">
+                        ${escapeHtml(
+                            line
+                        )}
+                    </div>
 
-            const document =
-                item.doc ||
-                item.document ||
-                item.filename ||
-                "Unknown document";
+                `;
+            }
 
-            const page =
-                item.page ||
-                item.page_number ||
-                "?";
-
-            const text =
-                item.text ||
-                item.content ||
-                "";
 
             return `
-                <div class="source">
 
-                    <b>
-                        ${escapeHtml(document)}
-                    </b>
+                <p>
+                    ${escapeHtml(
+                        line
+                    )}
+                </p>
 
-                    <span>
-                        Page ${escapeHtml(page)}
-                    </span>
-
-                    ${
-                        text
-                            ? `<p>${escapeHtml(text)}</p>`
-                            : ""
-                    }
-
-                </div>
             `;
-
         })
         .join("");
 }
 
-/* =========================
-   CONFLICT
-========================= */
-
-function renderConflict(data) {
-
-    const container =
-        $("conflict");
-
-    if (!container) {
-        return;
-    }
-
-    const conflict =
-        data.conflict ||
-        data.conflicts;
-
-    if (!conflict) {
-
-        container.innerHTML = "";
-
-        return;
-    }
-
-    if (typeof conflict === "string") {
-
-        container.innerHTML = `
-            <div class="warn">
-                ⚠ ${escapeHtml(conflict)}
-            </div>
-        `;
-
-        return;
-    }
-
-    const message =
-        conflict.message ||
-        "Different values or statements were found across the uploaded documents.";
-
-    const values =
-        conflict.values ||
-        conflict.amounts ||
-        [];
-
-    const documents =
-        conflict.documents ||
-        conflict.by_document ||
-        {};
-
-    container.innerHTML = `
-        <div class="warn">
-
-            <strong>⚠ Conflict detected</strong>
-
-            <p>
-                ${escapeHtml(message)}
-            </p>
-
-            ${
-                values.length
-                    ? `
-                        <div class="conflict-values">
-                            ${values.map(value => `
-                                <span>
-                                    ${escapeHtml(value)}
-                                </span>
-                            `).join("")}
-                        </div>
-                    `
-                    : ""
-            }
-
-            ${
-                Object.keys(documents).length
-                    ? `
-                        <div class="conflict-documents">
-                            ${Object.entries(documents)
-                                .map(([doc, value]) => `
-                                    <div>
-                                        • ${escapeHtml(doc)}
-                                        → ${escapeHtml(value)}
-                                    </div>
-                                `)
-                                .join("")}
-                        </div>
-                    `
-                    : ""
-            }
-
-        </div>
-    `;
-}
-
-/* =========================
-   UNCERTAINTY
-========================= */
-
-function renderUncertainty(data) {
-
-    const container =
-        $("uncertainty");
-
-    if (!container) {
-        return;
-    }
-
-    const uncertainty =
-        data.uncertainty ||
-        data.warning;
-
-    if (!uncertainty) {
-
-        container.innerHTML = "";
-
-        return;
-    }
-
-    const message =
-        typeof uncertainty === "string"
-            ? uncertainty
-            : uncertainty.message ||
-              "The available evidence may be incomplete.";
-
-    container.innerHTML = `
-        <div class="warn">
-            <strong>⚠ Uncertainty</strong>
-            <p>${escapeHtml(message)}</p>
-        </div>
-    `;
-}
 
 /* =========================
    HISTORY
 ========================= */
 
-function saveHistory(question, data) {
+function saveHistory(
+    question,
+    result
+) {
 
     const item = {
+
         question,
+
         answer:
-            data?.answer ||
-            data?.result ||
+            result?.answer ||
             "No answer returned.",
-        timestamp: new Date().toLocaleString()
+
+        timestamp:
+            new Date()
+                .toLocaleString()
     };
 
-    investigationHistory.unshift(item);
+
+    investigationHistory.unshift(
+        item
+    );
+
 
     investigationHistory =
-        investigationHistory.slice(0, 20);
+        investigationHistory.slice(
+            0,
+            20
+        );
+
 
     localStorage.setItem(
         "docxray_history",
-        JSON.stringify(investigationHistory)
+        JSON.stringify(
+            investigationHistory
+        )
     );
+
 
     renderHistory();
 }
+
 
 function loadHistory() {
 
@@ -897,8 +1194,10 @@ function loadHistory() {
         investigationHistory = [];
     }
 
+
     renderHistory();
 }
+
 
 function renderHistory() {
 
@@ -909,45 +1208,79 @@ function renderHistory() {
         return;
     }
 
-    if (!investigationHistory.length) {
+
+    if (
+        !investigationHistory.length
+    ) {
 
         container.innerHTML = `
+
             <div class="empty">
-                <div class="empty-icon">◷</div>
-                <strong>No investigations yet</strong>
-                <span>Your recent questions will appear here.</span>
+
+                <div class="empty-icon">
+                    ◷
+                </div>
+
+                <strong>
+                    No investigations yet
+                </strong>
+
+                <span>
+                    Your recent questions will appear here.
+                </span>
+
             </div>
+
         `;
 
         return;
     }
 
+
     container.innerHTML =
         investigationHistory
-            .map((item, index) => `
-                <div class="history-item">
+            .map(
+                (item, index) => `
 
-                    <div>
-                        <strong>
-                            ${escapeHtml(item.question)}
-                        </strong>
+                    <div class="history-item">
 
-                        <span>
-                            ${escapeHtml(item.timestamp)}
-                        </span>
+                        <div>
+
+                            <strong>
+                                ${escapeHtml(
+                                    item.question
+                                )}
+                            </strong>
+
+                            <span>
+                                ${escapeHtml(
+                                    item.timestamp
+                                )}
+                            </span>
+
+                            <p>
+                                ${escapeHtml(
+                                    item.answer
+                                )}
+                            </p>
+
+                        </div>
+
+
+                        <button
+                            type="button"
+                            onclick="reuseHistory(${index})"
+                        >
+                            Reuse
+                        </button>
+
                     </div>
 
-                    <button
-                        type="button"
-                        onclick="reuseHistory(${index})"
-                    >
-                        Reuse
-                    </button>
-
-                </div>
-            `)
+                `
+            )
             .join("");
 }
+
 
 function reuseHistory(index) {
 
@@ -958,14 +1291,21 @@ function reuseHistory(index) {
         return;
     }
 
-    setQuestion(item.question);
+    setQuestion(
+        item.question
+    );
 }
+
+window.reuseHistory =
+    reuseHistory;
+
 
 /* =========================
    CLEAR WORKSPACE
 ========================= */
 
-const clearButton = $("clearWorkspace");
+const clearButton =
+    $("clearWorkspace");
 
 if (clearButton) {
 
@@ -973,13 +1313,15 @@ if (clearButton) {
         "click",
         async () => {
 
-            const confirmed = confirm(
-                "Clear all uploaded documents and workspace data?"
-            );
+            const confirmed =
+                confirm(
+                    "Clear all uploaded documents and workspace data?"
+                );
 
             if (!confirmed) {
                 return;
             }
+
 
             try {
 
@@ -991,21 +1333,28 @@ if (clearButton) {
                         }
                     );
 
+
                 if (!response.ok) {
+
                     throw new Error(
                         "Could not clear workspace"
                     );
                 }
 
+
                 await refresh();
+
 
                 setStatus(
                     "Workspace cleared"
                 );
 
+
             } catch (error) {
 
-                console.error(error);
+                console.error(
+                    error
+                );
 
                 alert(
                     "Could not clear workspace.\n\n" +
@@ -1015,6 +1364,7 @@ if (clearButton) {
         }
     );
 }
+
 
 /* =========================
    KEYBOARD SHORTCUT
@@ -1042,15 +1392,6 @@ if (questionInput) {
     );
 }
 
-/* =========================
-   GLOBAL FUNCTIONS
-========================= */
-
-window.setQuestion = setQuestion;
-window.showSection = showSection;
-window.removeDocument = removeDocument;
-window.reuseHistory = reuseHistory;
-window.askQuestion = askQuestion;
 
 /* =========================
    INITIAL LOAD
@@ -1061,16 +1402,21 @@ document.addEventListener(
     () => {
 
         loadHistory();
+
         refresh();
 
-        // Set Overview active initially
+
         const overviewButton =
             document.querySelector(
                 '.nav[data-target="overview"]'
             );
 
+
         if (overviewButton) {
-            overviewButton.classList.add("active");
+
+            overviewButton.classList.add(
+                "active"
+            );
         }
     }
 );
