@@ -1201,20 +1201,15 @@ function loadHistory() {
 
 function renderHistory() {
 
-    const container =
-        $("historyList");
+    const container = $("historyList");
 
     if (!container) {
         return;
     }
 
-
-    if (
-        !investigationHistory.length
-    ) {
+    if (!investigationHistory.length) {
 
         container.innerHTML = `
-
             <div class="empty">
 
                 <div class="empty-icon">
@@ -1230,57 +1225,73 @@ function renderHistory() {
                 </span>
 
             </div>
-
         `;
 
         return;
     }
 
-
     container.innerHTML =
-        investigationHistory
-            .map(
-                (item, index) => `
+        investigationHistory.map((item, index) => {
 
-                    <div class="history-item">
+            let answer =
+                item.answer ||
+                "No answer returned.";
 
-                        <div>
+            /*
+             * Remove excessive whitespace
+             */
+            answer = String(answer)
+                .replace(/\s+/g, " ")
+                .trim();
 
-                            <strong>
-                                ${escapeHtml(
-                                    item.question
-                                )}
-                            </strong>
+            /*
+             * Keep history compact
+             */
+            if (answer.length > 280) {
+                answer =
+                    answer.substring(0, 280) +
+                    "...";
+            }
 
-                            <span>
-                                ${escapeHtml(
-                                    item.timestamp
-                                )}
-                            </span>
+            return `
 
-                            <p>
-                                ${escapeHtml(
-                                    item.answer
-                                )}
-                            </p>
+                <div class="history-item">
 
-                        </div>
+                    <div class="history-content">
 
+                        <strong>
+                            ${escapeHtml(
+                                item.question
+                            )}
+                        </strong>
 
-                        <button
-                            type="button"
-                            onclick="reuseHistory(${index})"
-                        >
-                            Reuse
-                        </button>
+                        <span class="history-time">
+                            ${escapeHtml(
+                                item.timestamp
+                            )}
+                        </span>
+
+                        <p class="history-answer">
+                            ${escapeHtml(
+                                answer
+                            )}
+                        </p>
 
                     </div>
 
-                `
-            )
-            .join("");
-}
+                    <button
+                        type="button"
+                        onclick="reuseHistory(${index})"
+                    >
+                        Reuse
+                    </button>
 
+                </div>
+
+            `;
+
+        }).join("");
+}
 
 function reuseHistory(index) {
 
