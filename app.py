@@ -777,8 +777,77 @@ def list_documents():
 
 @app.post("/api/upload")
 async def upload_files(
-    files: List[UploadFile] = File(...)
+    files: List[UploadFile] = File(default=[])
 ):
+    uploaded = []
+
+    if not files:
+        raise HTTPException(
+            status_code=400,
+            detail="No PDF file received. Please select a PDF and try again."
+        )
+
+    for file in files:
+
+        if not file.filename:
+            continue
+
+        if not file.filename.lower().endswith(".pdf"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"{file.filename} is not a PDF file."
+            )
+
+        safe_name = Path(file.filename).name
+        destination = UPLOAD_DIR / safe_name
+
+        try:
+
+            with open(destination, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+
+            pages = extract_pdf(safe_name)
+
+            if not pages:
+                if destination.exists():
+                    destination.unlink()
+
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Could not extract text from {safe_name}. The PDF may be scanned or empty."
+                )
+
+            documents[safe_name] = {
+                "filename": safe_name,
+                "pages": pages,
+                "page_count": len(pages)
+            }
+
+            uploaded.append({
+                "filename": safe_name,
+                "pages": len(pages)
+            })
+
+        except HTTPException:
+            raise
+
+        except Exception as error:
+
+            if destination.exists():
+                destination.unlink()
+
+            raise HTTPException(
+                status_code=400,
+                detail=f"Could not process {safe_name}: {str(error)}"
+            )
+
+    rebuild_index()
+
+    return {
+        "success": True,
+        "uploaded": uploaded,
+        "count": len(uploaded)
+    }
 
     uploaded = []
 

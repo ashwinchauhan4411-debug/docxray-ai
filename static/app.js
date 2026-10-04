@@ -421,11 +421,14 @@ if (uploadButton) {
 
                 if (!response.ok) {
 
-                    throw new Error(
-                        data.detail ||
-                        `Failed to upload ${file.name}`
-                    );
+                 const errorMessage =
+    typeof data.detail === "string"
+        ? data.detail
+        : data.detail
+            ? JSON.stringify(data.detail)
+            : `Failed to upload ${file.name}`;
 
+throw new Error(errorMessage);
                 }
 
             }
