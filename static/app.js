@@ -470,7 +470,7 @@ throw new Error(errorMessage);
    INVESTIGATION
 ========================= */
 
-const askButton = $("askButton");
+const askButton = $("askBtn");
 
 if (askButton) {
 
@@ -500,7 +500,7 @@ async function askQuestion() {
 
     setStatus("Investigating...");
 
-    const answerContainer = $("answer");
+    const answerContainer = $("result");
 
     if (answerContainer) {
 
@@ -577,7 +577,7 @@ async function askQuestion() {
 
 function renderInvestigation(data) {
 
-    const answerContainer = $("answer");
+    const answerContainer = $("result");
 
     if (!answerContainer) {
         return;
