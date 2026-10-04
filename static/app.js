@@ -279,8 +279,12 @@ async function removeDocument(encodedFilename) {
 /* =========================
    UPLOAD
 ========================= */
+/* =========================
+   UPLOAD
+========================= */
 
-const fileInput = $("fileInput");
+const fileInput = $("files");
+const uploadButton = $("uploadBtn");
 const dropzone = $("dropzone");
 const selectedFiles = $("selectedFiles");
 
@@ -302,7 +306,10 @@ if (fileInput) {
     });
 }
 
-/* Drag and drop */
+
+/* =========================
+   DRAG AND DROP
+========================= */
 
 if (dropzone) {
 
@@ -311,20 +318,24 @@ if (dropzone) {
         dropzone.addEventListener(eventName, (event) => {
 
             event.preventDefault();
-
             dropzone.classList.add("drag");
+
         });
+
     });
+
 
     ["dragleave", "drop"].forEach(eventName => {
 
         dropzone.addEventListener(eventName, (event) => {
 
             event.preventDefault();
-
             dropzone.classList.remove("drag");
+
         });
+
     });
+
 
     dropzone.addEventListener("drop", (event) => {
 
@@ -332,16 +343,18 @@ if (dropzone) {
             event.dataTransfer.files || []
         );
 
-        if (!fileInput || !files.length) {
+        const pdfFiles = files.filter(
+            file =>
+                file.type === "application/pdf" ||
+                file.name.toLowerCase().endsWith(".pdf")
+        );
+
+        if (!fileInput || !pdfFiles.length) {
             return;
         }
 
-        const pdfFiles = files.filter(
-            file => file.type === "application/pdf" ||
-                    file.name.toLowerCase().endsWith(".pdf")
-        );
-
         try {
+
             const dataTransfer = new DataTransfer();
 
             pdfFiles.forEach(file => {
@@ -356,22 +369,23 @@ if (dropzone) {
             }
 
         } catch (error) {
+
             console.error("Drop error:", error);
+
         }
+
     });
+
 }
+
 
 /* =========================
    PROCESS DOCUMENTS
 ========================= */
 
-const uploadForm = $("uploadForm");
+if (uploadButton) {
 
-if (uploadForm) {
-
-    uploadForm.addEventListener("submit", async (event) => {
-
-        event.preventDefault();
+    uploadButton.addEventListener("click", async () => {
 
         if (!fileInput || !fileInput.files.length) {
 
@@ -383,6 +397,8 @@ if (uploadForm) {
         const files = Array.from(fileInput.files);
 
         setStatus("Processing documents...");
+
+        uploadButton.disabled = true;
 
         try {
 
@@ -409,20 +425,23 @@ if (uploadForm) {
                         data.detail ||
                         `Failed to upload ${file.name}`
                     );
+
                 }
+
             }
+
 
             await refresh();
 
             setStatus("Documents processed successfully");
 
-            if (fileInput) {
-                fileInput.value = "";
-            }
+            fileInput.value = "";
 
             if (selectedFiles) {
                 selectedFiles.textContent = "No files selected";
             }
+
+            alert("Documents uploaded successfully!");
 
         } catch (error) {
 
@@ -434,10 +453,16 @@ if (uploadForm) {
                 "Upload failed.\n\n" +
                 error.message
             );
-        }
-    });
-}
 
+        } finally {
+
+            uploadButton.disabled = false;
+
+        }
+
+    });
+
+}
 /* =========================
    INVESTIGATION
 ========================= */
