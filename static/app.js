@@ -118,7 +118,7 @@ async function refresh() {
 
         renderDocuments(currentDocuments);
 
-        const count = $("documentCount");
+        const count = $("docCount");
 
         if (count) {
             count.textContent = currentDocuments.length;
@@ -132,7 +132,7 @@ async function refresh() {
 
 function renderDocuments(documents) {
 
-    const container = $("documentsList");
+    const container = $("docs");
 
     if (!container) {
         console.warn("documentsList not found");
