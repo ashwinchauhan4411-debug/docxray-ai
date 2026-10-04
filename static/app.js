@@ -18,6 +18,7 @@ function escapeHtml(value = "") {
 
 function setStatus(message) {
     const status = $("investigationStatus");
+
     if (status) {
         status.textContent = message;
     }
@@ -39,6 +40,7 @@ function setQuestion(question) {
 ========================= */
 
 function showSection(targetId) {
+
     const target = $(targetId);
 
     if (!target) {
@@ -47,6 +49,7 @@ function showSection(targetId) {
     }
 
     document.querySelectorAll(".nav").forEach((button) => {
+
         button.classList.remove("active");
 
         if (button.dataset.target === targetId) {
@@ -117,7 +120,6 @@ async function refresh() {
         renderDocuments([]);
     }
 }
-
 
 function renderDocuments(documents) {
 
@@ -302,7 +304,6 @@ const dropzone =
 const selectedFiles =
     $("selectedFiles");
 
-
 if (fileInput) {
 
     fileInput.addEventListener(
@@ -356,7 +357,6 @@ if (dropzone) {
             );
         });
 
-
     ["dragleave", "drop"]
         .forEach(eventName => {
 
@@ -372,7 +372,6 @@ if (dropzone) {
                 }
             );
         });
-
 
     dropzone.addEventListener(
         "drop",
@@ -561,12 +560,6 @@ if (uploadButton) {
    INVESTIGATION
 ========================= */
 
-/*
-IMPORTANT:
-HTML uses id="askBtn"
-NOT id="askButton"
-*/
-
 const askButton =
     $("askBtn");
 
@@ -577,7 +570,6 @@ if (askButton) {
         askQuestion
     );
 }
-
 
 /* =========================
    ASK QUESTION
@@ -631,7 +623,6 @@ async function askQuestion() {
         `;
     }
 
-
     try {
 
         const response =
@@ -651,12 +642,10 @@ async function askQuestion() {
                 }
             );
 
-
         const data =
             await response
                 .json()
                 .catch(() => null);
-
 
         if (!response.ok) {
 
@@ -667,7 +656,6 @@ async function askQuestion() {
             );
         }
 
-
         if (!data) {
 
             throw new Error(
@@ -675,40 +663,35 @@ async function askQuestion() {
             );
         }
 
-
         /*
-        BACKEND RESPONSE:
-
-        {
-            "success": true,
-            "result": {
-                "answer": "...",
-                "sources": [],
-                "conflict": {},
-                "uncertainty": {}
-            }
-        }
-        */
+         * BACKEND RESPONSE:
+         *
+         * {
+         *   "success": true,
+         *   "result": {
+         *      "answer": "...",
+         *      "sources": [],
+         *      "conflict": {},
+         *      "uncertainty": {}
+         *   }
+         * }
+         */
 
         const result =
             data.result || data;
 
-
         renderInvestigation(
             result
         );
-
 
         saveHistory(
             question,
             result
         );
 
-
         setStatus(
             "Investigation complete"
         );
-
 
     } catch (error) {
 
@@ -746,7 +729,6 @@ async function askQuestion() {
     }
 }
 
-
 /* =========================
    RENDER INVESTIGATION
 ========================= */
@@ -767,11 +749,9 @@ function renderInvestigation(
         return;
     }
 
-
     const answer =
         result?.answer ||
         "No answer returned.";
-
 
     const sources =
         Array.isArray(
@@ -780,14 +760,11 @@ function renderInvestigation(
             ? result.sources
             : [];
 
-
     const conflict =
         result?.conflict;
 
-
     const uncertainty =
         result?.uncertainty;
-
 
     let html = `
 
@@ -803,7 +780,6 @@ function renderInvestigation(
 
     `;
 
-
     /* =========================
        SOURCES
     ========================= */
@@ -817,7 +793,6 @@ function renderInvestigation(
             </h4>
 
     `;
-
 
     if (!sources.length) {
 
@@ -842,18 +817,15 @@ function renderInvestigation(
                         item?.filename ||
                         "Unknown document";
 
-
                     const page =
                         item?.page ||
                         item?.page_number ||
                         "?";
 
-
                     const text =
                         item?.text ||
                         item?.content ||
                         "";
-
 
                     return `
 
@@ -890,9 +862,7 @@ function renderInvestigation(
                 .join("");
     }
 
-
     html += `</div>`;
-
 
     /* =========================
        CONFLICT
@@ -906,9 +876,7 @@ function renderInvestigation(
                 : conflict.message ||
                   "Different values or statements were found across the uploaded documents.";
 
-
         let conflictDetails = "";
-
 
         if (
             typeof conflict ===
@@ -920,12 +888,10 @@ function renderInvestigation(
                 conflict.amounts ||
                 [];
 
-
             const documents =
                 conflict.documents ||
                 conflict.by_document ||
                 {};
-
 
             if (values.length) {
 
@@ -949,7 +915,6 @@ function renderInvestigation(
 
                 `;
             }
-
 
             if (
                 Object.keys(
@@ -988,7 +953,6 @@ function renderInvestigation(
             }
         }
 
-
         html += `
 
             <div class="result-block">
@@ -1014,7 +978,6 @@ function renderInvestigation(
         `;
     }
 
-
     /* =========================
        UNCERTAINTY
     ========================= */
@@ -1026,7 +989,6 @@ function renderInvestigation(
                 ? uncertainty
                 : uncertainty.message ||
                   "The available evidence may be incomplete.";
-
 
         html += `
 
@@ -1051,14 +1013,11 @@ function renderInvestigation(
         `;
     }
 
-
     html += `</div>`;
-
 
     container.innerHTML =
         html;
 }
-
 
 /* =========================
    ANSWER FORMATTER
@@ -1073,7 +1032,6 @@ function formatAnswer(
         return "No answer returned.";
     }
 
-
     const lines =
         String(answer)
             .split("\n")
@@ -1082,7 +1040,6 @@ function formatAnswer(
                     line.trim()
             )
             .filter(Boolean);
-
 
     if (lines.length === 1) {
 
@@ -1094,7 +1051,6 @@ function formatAnswer(
             </p>
         `;
     }
-
 
     return lines
         .map(line => {
@@ -1116,7 +1072,6 @@ function formatAnswer(
                 `;
             }
 
-
             return `
 
                 <p>
@@ -1130,10 +1085,20 @@ function formatAnswer(
         .join("");
 }
 
-
 /* =========================
    HISTORY
 ========================= */
+
+/*
+ * IMPORTANT:
+ * History stores ONLY:
+ * - question
+ * - timestamp
+ *
+ * It does NOT store the full answer.
+ * This prevents the history card from becoming
+ * a long mixture of answer + sources + citations.
+ */
 
 function saveHistory(
     question,
@@ -1142,22 +1107,16 @@ function saveHistory(
 
     const item = {
 
-        question,
-
-        answer:
-            result?.answer ||
-            "No answer returned.",
+        question: question,
 
         timestamp:
             new Date()
                 .toLocaleString()
     };
 
-
     investigationHistory.unshift(
         item
     );
-
 
     investigationHistory =
         investigationHistory.slice(
@@ -1165,14 +1124,16 @@ function saveHistory(
             20
         );
 
-
+    /*
+     * New storage key so old broken
+     * history data is ignored.
+     */
     localStorage.setItem(
-        "docxray_history",
+        "docxray_history_v2",
         JSON.stringify(
             investigationHistory
         )
     );
-
 
     renderHistory();
 }
@@ -1185,15 +1146,28 @@ function loadHistory() {
         investigationHistory =
             JSON.parse(
                 localStorage.getItem(
-                    "docxray_history"
+                    "docxray_history_v2"
                 ) || "[]"
             );
 
-    } catch {
+        if (
+            !Array.isArray(
+                investigationHistory
+            )
+        ) {
+
+            investigationHistory = [];
+        }
+
+    } catch (error) {
+
+        console.error(
+            "History loading error:",
+            error
+        );
 
         investigationHistory = [];
     }
-
 
     renderHistory();
 }
@@ -1201,15 +1175,19 @@ function loadHistory() {
 
 function renderHistory() {
 
-    const container = $("historyList");
+    const container =
+        $("historyList");
 
     if (!container) {
         return;
     }
 
-    if (!investigationHistory.length) {
+    if (
+        !investigationHistory.length
+    ) {
 
         container.innerHTML = `
+
             <div class="empty">
 
                 <div class="empty-icon">
@@ -1225,75 +1203,53 @@ function renderHistory() {
                 </span>
 
             </div>
+
         `;
 
         return;
     }
 
     container.innerHTML =
-        investigationHistory.map((item, index) => {
+        investigationHistory
+            .map(
+                (item, index) => `
 
-            let answer =
-                item.answer ||
-                "No answer returned.";
+                    <div class="history-item">
 
-            /*
-             * Remove excessive whitespace
-             */
-            answer = String(answer)
-                .replace(/\s+/g, " ")
-                .trim();
+                        <div>
 
-            /*
-             * Keep history compact
-             */
-            if (answer.length > 280) {
-                answer =
-                    answer.substring(0, 280) +
-                    "...";
-            }
+                            <strong>
+                                ${escapeHtml(
+                                    item.question
+                                )}
+                            </strong>
 
-            return `
+                            <span>
+                                ${escapeHtml(
+                                    item.timestamp
+                                )}
+                            </span>
 
-                <div class="history-item">
+                        </div>
 
-                    <div class="history-content">
-
-                        <strong>
-                            ${escapeHtml(
-                                item.question
-                            )}
-                        </strong>
-
-                        <span class="history-time">
-                            ${escapeHtml(
-                                item.timestamp
-                            )}
-                        </span>
-
-                        <p class="history-answer">
-                            ${escapeHtml(
-                                answer
-                            )}
-                        </p>
+                        <button
+                            type="button"
+                            onclick="reuseHistory(${index})"
+                        >
+                            Reuse
+                        </button>
 
                     </div>
 
-                    <button
-                        type="button"
-                        onclick="reuseHistory(${index})"
-                    >
-                        Reuse
-                    </button>
-
-                </div>
-
-            `;
-
-        }).join("");
+                `
+            )
+            .join("");
 }
 
-function reuseHistory(index) {
+
+function reuseHistory(
+    index
+) {
 
     const item =
         investigationHistory[index];
@@ -1309,7 +1265,6 @@ function reuseHistory(index) {
 
 window.reuseHistory =
     reuseHistory;
-
 
 /* =========================
    CLEAR WORKSPACE
@@ -1333,7 +1288,6 @@ if (clearButton) {
                 return;
             }
 
-
             try {
 
                 const response =
@@ -1344,7 +1298,6 @@ if (clearButton) {
                         }
                     );
 
-
                 if (!response.ok) {
 
                     throw new Error(
@@ -1352,14 +1305,11 @@ if (clearButton) {
                     );
                 }
 
-
                 await refresh();
-
 
                 setStatus(
                     "Workspace cleared"
                 );
-
 
             } catch (error) {
 
@@ -1375,7 +1325,6 @@ if (clearButton) {
         }
     );
 }
-
 
 /* =========================
    KEYBOARD SHORTCUT
@@ -1403,7 +1352,6 @@ if (questionInput) {
     );
 }
 
-
 /* =========================
    INITIAL LOAD
 ========================= */
@@ -1416,12 +1364,10 @@ document.addEventListener(
 
         refresh();
 
-
         const overviewButton =
             document.querySelector(
                 '.nav[data-target="overview"]'
             );
-
 
         if (overviewButton) {
 
