@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <title>DocX-Ray AI — Intelligent Document Investigator</title>
+
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="shell">
+
+  <!-- ================= SIDEBAR ================= -->
+
+  <aside class="sidebar">
+
+    <div class="brand">
+
+      <div class="brand-mark">
+        DX
+      </div>
+
+      <div>
+        <div class="brand-name">
+          DocX-Ray <span>AI</span>
+        </div>
+
+        <div class="brand-sub">
+          Document Intelligence
+        </div>
+      </div>
+
+    </div>
+
+
+    <div class="workspace-label">
+      WORKSPACE
+    </div>
+
+
+    <nav>
+
+      <button class="nav active" data-target="overview">
+        <span>⌂</span>
+        <span>Overview</span>
+      </button>
+
+      <button class="nav" data-target="documents">
+        <span>▣</span>
+        <span>Documents</span>
+      </button>
+
+      <button class="nav" data-target="investigation">
+        <span>⌕</span>
+        <span>Investigation</span>
+      </button>
+
+      <button class="nav" data-target="history">
+        <span>◷</span>
+        <span>History</span>
+      </button>
+
+    </nav>
+
+
+    <!-- STATUS -->
+
+    <div class="sidebar-status">
+
+      <span class="status-dot"></span>
+
+      <div>
+        <strong>
+          AI Engine
+        </strong>
+
+        <small>
+          Evidence system ready
+        </small>
+      </div>
+
+    </div>
+
+
+    <div class="sidebar-footer">
+
+      <span class="dot"></span>
+
+      Local workspace
+
+      <span>•</span>
+
+      MVP
+
+    </div>
+
+  </aside>
+
+
+
+  <!-- ================= MAIN ================= -->
+
+  <main class="main">
+
+
+    <!-- TOP BAR -->
+
+    <header class="topbar">
+
+      <div>
+
+        <div class="eyebrow">
+          AI DOCUMENT INVESTIGATION
+        </div>
+
+        <h1>
+          Turn documents into <span>answers.</span>
+        </h1>
+
+        <p class="subtitle">
+          Upload your evidence, investigate across documents,
+          and trace every answer back to its source.
+        </p>
+
+      </div>
+
+
+      <div class="top-actions">
+
+        <div class="status">
+
+          <span></span>
+
+          <span id="status">
+            Ready
+          </span>
+
+        </div>
+
+        <div class="avatar">
+          A
+        </div>
+
+      </div>
+
+    </header>
+
+
+
+    <!-- ================= OVERVIEW ================= -->
+
+    <section id="overview" class="hero-grid">
+
+      <div class="hero-card">
+
+        <div class="hero-copy">
+
+          <div class="pill">
+            ✦ Evidence-first AI
+          </div>
+
+          <h2>
+            Your documents.<br>
+            <span>One investigation.</span>
+          </h2>
+
+          <p>
+            Search across your evidence library and get
+            answers backed by document-level sources.
+          </p>
+
+
+          <!-- QUICK ACTIONS -->
+
+          <div class="quick-actions">
+
+            <button
+              class="quick-action"
+              data-target="documents">
+
+              <span>＋</span>
+
+              <div>
+                <strong>
+                  Add documents
+                </strong>
+
+                <small>
+                  Build evidence library
+                </small>
+              </div>
+
+            </button>
+
+
+            <button
+              class="quick-action"
+              data-target="investigation">
+
+              <span>⌕</span>
+
+              <div>
+                <strong>
+                  Start investigation
+                </strong>
+
+                <small>
+                  Ask your documents
+                </small>
+              </div>
+
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <!-- VISUAL -->
+
+        <div class="hero-orbit">
+
+          <div class="orbit o1"></div>
+
+          <div class="orbit o2"></div>
+
+          <div class="doc-orb">
+
+            PDF
+
+            <br>
+
+            <small>
+              AI
+            </small>
+
+          </div>
+
+          <div class="spark s1">
+            ✦
+          </div>
+
+          <div class="spark s2">
+            +
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- ================= STATS ================= -->
+
+      <div class="stats-card">
+
+        <div class="stat">
+
+          <div class="stat-icon purple">
+            ▤
+          </div>
+
+          <div>
+
+            <strong id="docCount">
+              0
+            </strong>
+
+            <span>
+              Documents
+            </span>
+
+          </div>
+
+        </div>
+
+
+        <div class="stat">
+
+          <div class="stat-icon blue">
+            ⌁
+          </div>
+
+          <div>
+
+            <strong id="chunkCount">
+              0
+            </strong>
+
+            <span>
+              Evidence chunks
+            </span>
+
+          </div>
+
+        </div>
+
+
+        <div class="stat">
+
+          <div class="stat-icon green">
+            ✓
+          </div>
+
+          <div>
+
+            <strong>
+              Source
+            </strong>
+
+            <span>
+              Grounded answers
+            </span>
+
+          </div>
+
+        </div>
+
+
+        <div class="stat">
+
+          <div class="stat-icon orange">
+            ⚠
+          </div>
+
+          <div>
+
+            <strong id="conflictCount">
+              0
+            </strong>
+
+            <span>
+              Conflicts found
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ================= DOCUMENTS ================= -->
+
+    <section
+      id="documents"
+      class="section-head">
+
+      <div>
+
+        <div class="eyebrow">
+          01 / KNOWLEDGE BASE
+        </div>
+
+        <h3>
+          Build your evidence library
+        </h3>
+
+      </div>
+
+      <span class="section-note">
+        PDF supported in this MVP
+      </span>
+
+    </section>
+
+
+
+    <section class="work-grid">
+
+
+      <!-- UPLOAD -->
+
+      <div class="card upload-card">
+
+        <div class="card-head">
+
+          <div>
+
+            <h3>
+              Upload documents
+            </h3>
+
+            <p>
+              Add one or multiple PDFs to your investigation.
+            </p>
+
+          </div>
+
+          <div class="step">
+            01
+          </div>
+
+        </div>
+
+
+        <label
+          class="dropzone"
+          id="dropzone">
+
+          <input
+            id="files"
+            type="file"
+            accept="application/pdf"
+            multiple
+          >
+
+          <div class="upload-icon">
+            ↑
+          </div>
+
+          <strong>
+            Drop PDFs here or <u>browse files</u>
+          </strong>
+
+          <small>
+            Multiple files supported
+          </small>
+
+          <div
+            id="selectedFiles"
+            class="selected-files">
+          </div>
+
+        </label>
+
+
+        <div class="upload-footer">
+
+          <span id="uploadMsg">
+            No files selected
+          </span>
+
+          <button
+            id="uploadBtn"
+            class="primary">
+
+            Process documents
+
+            <span>
+              →
+            </span>
+
+          </button>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- LIBRARY -->
+
+      <div class="card library-card">
+
+        <div class="card-head">
+
+          <div>
+
+            <h3>
+              Document library
+            </h3>
+
+            <p>
+              Your investigation sources appear here.
+            </p>
+
+          </div>
+
+          <div class="step">
+            02
+          </div>
+
+        </div>
+
+
+        <!-- SEARCH -->
+
+        <div class="library-tools">
+
+          <div class="library-search">
+
+            <span>
+              ⌕
+            </span>
+
+            <input
+              id="documentSearch"
+              type="text"
+              placeholder="Search documents...">
+
+          </div>
+
+
+          <button
+            id="clearWorkspace"
+            class="secondary">
+
+            Clear
+
+          </button>
+
+        </div>
+
+
+        <!-- DOCUMENTS -->
+
+        <div
+          id="docs"
+          class="docs">
+
+          <div class="empty">
+
+            <div class="empty-icon">
+              ▤
+            </div>
+
+            <strong>
+              No documents yet
+            </strong>
+
+            <span>
+              Upload PDFs to start investigating.
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ================= INVESTIGATION ================= -->
+
+    <section
+      id="investigation"
+      class="section-head investigation-head">
+
+      <div>
+
+        <div class="eyebrow">
+          02 / INVESTIGATE
+        </div>
+
+        <h3>
+          Ask the investigator
+        </h3>
+
+      </div>
+
+      <span class="section-note">
+        Answers stay tied to your evidence
+      </span>
+
+    </section>
+
+
+
+    <!-- INVESTIGATOR -->
+
+    <section class="card investigator-card">
+
+
+      <!-- QUESTION -->
+
+      <div class="question-row">
+
+        <div class="question-icon">
+          ⌕
+        </div>
+
+        <textarea
+          id="question"
+          placeholder="Ask something about your documents…
+Example: What are the eligibility requirements?"></textarea>
+
+      </div>
+
+
+
+      <!-- SUGGESTIONS -->
+
+      <div class="ask-footer">
+
+        <div class="suggestions">
+
+          <button
+            onclick="setQuestion('What are the eligibility requirements?')">
+
+            Eligibility
+
+          </button>
+
+
+          <button
+            onclick="setQuestion('What are the key requirements?')">
+
+            Key requirements
+
+          </button>
+
+
+          <button
+            onclick="setQuestion('What information is different across documents?')">
+
+            Find conflicts
+
+          </button>
+
+
+          <button
+            onclick="setQuestion('What information is uncertain or unsupported?')">
+
+            Find uncertainty
+
+          </button>
+
+        </div>
+
+
+        <button
+          id="askBtn"
+          class="primary ask-btn">
+
+          Investigate
+
+          <span>
+            →
+          </span>
+
+        </button>
+
+      </div>
+
+
+
+      <!-- INVESTIGATION STATUS -->
+
+      <div
+        id="investigationStatus"
+        class="investigation-status">
+
+        <span class="status-dot"></span>
+
+        Evidence engine ready
+
+      </div>
+
+
+
+      <!-- RESULTS -->
+
+      <div id="result"></div>
+
+    </section>
+
+
+
+    <!-- ================= HISTORY ================= -->
+
+    <section
+      id="history"
+      class="section-head history-head">
+
+      <div>
+
+        <div class="eyebrow">
+          03 / ACTIVITY
+        </div>
+
+        <h3>
+          Investigation history
+        </h3>
+
+      </div>
+
+      <span class="section-note">
+        Recent questions and investigations
+      </span>
+
+    </section>
+
+
+
+    <section class="card history-card">
+
+      <div
+        id="historyList"
+        class="history-list">
+
+        <div class="empty">
+
+          <div class="empty-icon">
+            ◷
+          </div>
+
+          <strong>
+            No investigations yet
+          </strong>
+
+          <span>
+            Your recent questions will appear here.
+          </span>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+
+    
+
+    <!-- ================= FOOTER ================= -->
+
+    <footer class="footer">
+
+      <span>
+        DocX-Ray AI
+      </span>
+
+      <span>
+        ALG-AI-02 · Intelligent Document Investigator
+      </span>
+
+      <span>
+        Evidence-first AI
+      </span>
+
+    </footer>
+
+
+  </main>
+
+</div>
+
+
+
+<!-- JAVASCRIPT -->
+
+<script src="/static/app.js"></script>
+
+</body>
+
+</html>
