@@ -1,878 +1,1041 @@
 const $ = (id) => document.getElementById(id);
 
 let currentDocuments = [];
+let investigationHistory = [];
 
-
-/* =====================================================
-   HELPERS
-===================================================== */
+/* =========================
+   BASIC HELPERS
+========================= */
 
 function escapeHtml(value = "") {
     return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 }
 
-
-function setQuestion(question) {
-    const box = $("question");
-
-    if (box) {
-        box.value = question;
-        box.focus();
+function setStatus(message) {
+    const status = $("investigationStatus");
+    if (status) {
+        status.textContent = message;
     }
 }
 
+function setQuestion(question) {
+    const input = $("question");
+    if (input) {
+        input.value = question;
+        input.focus();
+    }
 
-/* =====================================================
-   DOCUMENT REFRESH
-===================================================== */
+    showSection("investigation");
+}
+
+/* =========================
+   SIDEBAR NAVIGATION
+========================= */
+
+function showSection(targetId) {
+    const target = document.getElementById(targetId);
+
+    if (!target) {
+        console.warn("Section not found:", targetId);
+        return;
+    }
+
+    // Remove active state
+    document.querySelectorAll(".nav").forEach((button) => {
+        button.classList.remove("active");
+    });
+
+    // Activate correct sidebar button
+    const activeButton = document.querySelector(
+        `.nav[data-target="${targetId}"]`
+    );
+
+    if (activeButton) {
+        activeButton.classList.add("active");
+    }
+
+    // Scroll to section
+    target.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+}
+
+/* Sidebar buttons */
+document.querySelectorAll(".nav").forEach((button) => {
+    button.addEventListener("click", function (event) {
+        event.preventDefault();
+
+        const target = this.dataset.target;
+
+        if (target) {
+            showSection(target);
+        }
+    });
+});
+
+/* =========================
+   QUICK QUESTION BUTTONS
+========================= */
+
+document.querySelectorAll(".quick-action").forEach((button) => {
+    button.addEventListener("click", () => {
+        const question = button.dataset.question;
+
+        if (question) {
+            setQuestion(question);
+        }
+    });
+});
+
+/* =========================
+   DOCUMENTS
+========================= */
 
 async function refresh() {
-
     try {
-
         const response = await fetch("/api/documents");
+
+        if (!response.ok) {
+            throw new Error("Could not load documents");
+        }
 
         const data = await response.json();
 
-        currentDocuments = data.documents || [];
+        currentDocuments = data.documents || data || [];
 
-        $("docCount").textContent =
-            currentDocuments.length;
+        renderDocuments(currentDocuments);
 
-        renderDocuments();
+        const count = $("documentCount");
 
-        $("status").textContent = "Ready";
+        if (count) {
+            count.textContent = currentDocuments.length;
+        }
 
     } catch (error) {
-
-        console.error("Refresh error:", error);
-
-        $("status").textContent =
-            "Server error";
+        console.error("Document refresh error:", error);
+        renderDocuments([]);
     }
 }
 
+function renderDocuments(documents) {
 
-/* =====================================================
-   RENDER DOCUMENTS
-===================================================== */
+    const container = $("documentsList");
 
-function renderDocuments() {
+    if (!container) {
+        console.warn("documentsList not found");
+        return;
+    }
 
-    const container = $("docs");
-
-    if (!container) return;
-
-
-    if (!currentDocuments.length) {
+    if (!documents || documents.length === 0) {
 
         container.innerHTML = `
             <div class="empty">
-
                 <div class="empty-icon">▤</div>
-
                 <strong>No documents yet</strong>
-
-                <span>
-                    Upload PDFs to start investigating.
-                </span>
-
+                <span>Upload PDFs to start investigating.</span>
             </div>
         `;
 
         return;
     }
 
+    container.innerHTML = documents.map((doc) => {
 
-    container.innerHTML =
-        currentDocuments.map((doc) => {
+        const name =
+            typeof doc === "string"
+                ? doc
+                : doc.filename || doc.name || "Document";
 
-            const filename =
-                typeof doc === "string"
-                    ? doc
-                    : doc.filename;
+        const safeName = escapeHtml(name);
 
-            const pages =
-                typeof doc === "object"
-                    ? doc.pages || 0
-                    : 0;
+        const encodedName = encodeURIComponent(name);
 
-            return `
-                <div class="doc">
+        return `
+            <div class="doc">
 
-                    <div class="doc-icon">
-                        PDF
-                    </div>
-
-                    <div class="doc-meta">
-
-                        <strong title="${escapeHtml(filename)}">
-                            ${escapeHtml(filename)}
-                        </strong>
-
-                        <span>
-                            ${pages} page(s) • Indexed and ready
-                        </span>
-
-                    </div>
-
-                    <div class="doc-check">
-                        ✓
-                    </div>
-
-                    <button
-                        class="remove-doc"
-                        onclick="removeDocument('${encodeURIComponent(filename)}')"
-                    >
-                        🗑 Remove
-                    </button>
-
+                <div class="doc-icon">
+                    ▤
                 </div>
-            `;
 
-        }).join("");
+                <div class="doc-meta">
+                    <strong>${safeName}</strong>
+                    <span>PDF document</span>
+                </div>
+
+                <div class="doc-check">
+                    ✓
+                </div>
+
+                <button
+                    class="remove-doc"
+                    type="button"
+                    onclick="removeDocument('${encodedName}')"
+                    title="Remove document"
+                >
+                    🗑 Remove
+                </button>
+
+            </div>
+        `;
+
+    }).join("");
 }
 
+/* =========================
+   DOCUMENT SEARCH
+========================= */
 
-/* =====================================================
+const documentSearch = $("documentSearch");
+
+if (documentSearch) {
+
+    documentSearch.addEventListener("input", () => {
+
+        const query = documentSearch.value
+            .toLowerCase()
+            .trim();
+
+        if (!query) {
+            renderDocuments(currentDocuments);
+            return;
+        }
+
+        const filtered = currentDocuments.filter((doc) => {
+
+            const name =
+                typeof doc === "string"
+                    ? doc
+                    : doc.filename || doc.name || "";
+
+            return name.toLowerCase().includes(query);
+
+        });
+
+        renderDocuments(filtered);
+    });
+}
+
+/* =========================
    REMOVE DOCUMENT
-===================================================== */
+========================= */
 
 async function removeDocument(encodedFilename) {
 
-    const filename =
-        decodeURIComponent(encodedFilename);
+    const filename = decodeURIComponent(encodedFilename);
 
+    const confirmed = confirm(
+        `Remove "${filename}" from the workspace?`
+    );
 
-    if (!confirm(
-        `Remove "${filename}"?`
-    )) {
+    if (!confirmed) {
         return;
     }
 
+    try {
+
+        const response = await fetch(
+            `/api/documents/${encodeURIComponent(filename)}`,
+            {
+                method: "DELETE"
+            }
+        );
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "Could not remove document"
+            );
+        }
+
+        await refresh();
+
+        setStatus("Document removed");
+
+    } catch (error) {
+
+        console.error("Remove document error:", error);
+
+        alert(
+            "Could not remove the document.\n\n" +
+            error.message
+        );
+    }
+}
+
+/* =========================
+   UPLOAD
+========================= */
+
+const fileInput = $("fileInput");
+const dropzone = $("dropzone");
+const selectedFiles = $("selectedFiles");
+
+if (fileInput) {
+
+    fileInput.addEventListener("change", () => {
+
+        const files = Array.from(fileInput.files || []);
+
+        if (!selectedFiles) return;
+
+        if (files.length === 0) {
+            selectedFiles.textContent = "No files selected";
+            return;
+        }
+
+        selectedFiles.textContent =
+            files.map(file => file.name).join(", ");
+    });
+}
+
+/* Drag and drop */
+
+if (dropzone) {
+
+    ["dragenter", "dragover"].forEach(eventName => {
+
+        dropzone.addEventListener(eventName, (event) => {
+
+            event.preventDefault();
+
+            dropzone.classList.add("drag");
+        });
+    });
+
+    ["dragleave", "drop"].forEach(eventName => {
+
+        dropzone.addEventListener(eventName, (event) => {
+
+            event.preventDefault();
+
+            dropzone.classList.remove("drag");
+        });
+    });
+
+    dropzone.addEventListener("drop", (event) => {
+
+        const files = Array.from(
+            event.dataTransfer.files || []
+        );
+
+        if (!fileInput || !files.length) {
+            return;
+        }
+
+        const pdfFiles = files.filter(
+            file => file.type === "application/pdf" ||
+                    file.name.toLowerCase().endsWith(".pdf")
+        );
+
+        try {
+            const dataTransfer = new DataTransfer();
+
+            pdfFiles.forEach(file => {
+                dataTransfer.items.add(file);
+            });
+
+            fileInput.files = dataTransfer.files;
+
+            if (selectedFiles) {
+                selectedFiles.textContent =
+                    pdfFiles.map(file => file.name).join(", ");
+            }
+
+        } catch (error) {
+            console.error("Drop error:", error);
+        }
+    });
+}
+
+/* =========================
+   PROCESS DOCUMENTS
+========================= */
+
+const uploadForm = $("uploadForm");
+
+if (uploadForm) {
+
+    uploadForm.addEventListener("submit", async (event) => {
+
+        event.preventDefault();
+
+        if (!fileInput || !fileInput.files.length) {
+
+            alert("Please select at least one PDF.");
+
+            return;
+        }
+
+        const files = Array.from(fileInput.files);
+
+        setStatus("Processing documents...");
+
+        try {
+
+            for (const file of files) {
+
+                const formData = new FormData();
+
+                formData.append("file", file);
+
+                const response = await fetch(
+                    "/api/upload",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+                const data =
+                    await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.detail ||
+                        `Failed to upload ${file.name}`
+                    );
+                }
+            }
+
+            await refresh();
+
+            setStatus("Documents processed successfully");
+
+            if (fileInput) {
+                fileInput.value = "";
+            }
+
+            if (selectedFiles) {
+                selectedFiles.textContent = "No files selected";
+            }
+
+        } catch (error) {
+
+            console.error("Upload error:", error);
+
+            setStatus("Upload failed");
+
+            alert(
+                "Upload failed.\n\n" +
+                error.message
+            );
+        }
+    });
+}
+
+/* =========================
+   INVESTIGATION
+========================= */
+
+const askButton = $("askButton");
+
+if (askButton) {
+
+    askButton.addEventListener("click", askQuestion);
+}
+
+async function askQuestion() {
+
+    const questionInput = $("question");
+
+    if (!questionInput) {
+        return;
+    }
+
+    const question = questionInput.value.trim();
+
+    if (!question) {
+
+        alert("Please enter a question.");
+
+        questionInput.focus();
+
+        return;
+    }
+
+    showSection("investigation");
+
+    setStatus("Investigating...");
+
+    const answerContainer = $("answer");
+
+    if (answerContainer) {
+
+        answerContainer.innerHTML = `
+            <div class="muted">
+                Investigating your documents...
+            </div>
+        `;
+    }
 
     try {
 
-        const response =
-            await fetch(
-                `/api/documents/${encodeURIComponent(filename)}`,
-                {
-                    method: "DELETE"
-                }
-            );
+        const response = await fetch(
+            "/api/ask",
+            {
+                method: "POST",
 
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    question: question
+                })
+            }
+        );
 
         const data =
-            await response.json();
-
+            await response.json().catch(() => null);
 
         if (!response.ok) {
 
             throw new Error(
-                data.detail ||
-                "Could not remove document."
+                data?.detail ||
+                data?.message ||
+                "Investigation failed"
             );
         }
 
+        if (!data) {
+            throw new Error("No response received from server");
+        }
 
-        await refresh();
+        renderInvestigation(data);
 
+        saveHistory(question, data);
+
+        setStatus("Investigation complete");
 
     } catch (error) {
 
-        console.error(error);
+        console.error("Investigation error:", error);
 
-        alert(error.message);
+        setStatus("Investigation failed");
+
+        if (answerContainer) {
+
+            answerContainer.innerHTML = `
+                <div class="warn">
+                    <strong>Investigation failed</strong>
+                    <p>${escapeHtml(error.message)}</p>
+                    <span>
+                        Make sure the server is running and documents have been uploaded.
+                    </span>
+                </div>
+            `;
+        }
     }
 }
 
+/* =========================
+   RENDER INVESTIGATION
+========================= */
 
-/* =====================================================
-   FILE SELECTION
-===================================================== */
+function renderInvestigation(data) {
 
-const filesInput =
-    $("files");
+    const answerContainer = $("answer");
 
-
-if (filesInput) {
-
-    filesInput.addEventListener(
-        "change",
-        () => {
-
-            const files =
-                [...filesInput.files];
-
-
-            $("selectedFiles").textContent =
-                files.length
-                    ? files
-                        .map(file => file.name)
-                        .join(" • ")
-                    : "";
-
-
-            $("uploadMsg").textContent =
-                files.length
-                    ? `${files.length} PDF${files.length > 1 ? "s" : ""} selected`
-                    : "No files selected";
-        }
-    );
-}
-
-
-/* =====================================================
-   DRAG & DROP
-===================================================== */
-
-const dropzone =
-    $("dropzone");
-
-
-if (dropzone) {
-
-    ["dragenter", "dragover"].forEach(
-        eventName => {
-
-            dropzone.addEventListener(
-                eventName,
-                (event) => {
-
-                    event.preventDefault();
-
-                    dropzone.classList.add("drag");
-                }
-            );
-
-        }
-    );
-
-
-    ["dragleave", "drop"].forEach(
-        eventName => {
-
-            dropzone.addEventListener(
-                eventName,
-                (event) => {
-
-                    event.preventDefault();
-
-                    dropzone.classList.remove("drag");
-                }
-            );
-
-        }
-    );
-
-
-    dropzone.addEventListener(
-        "drop",
-        (event) => {
-
-            const droppedFiles =
-                event.dataTransfer.files;
-
-
-            if (
-                droppedFiles &&
-                droppedFiles.length
-            ) {
-
-                filesInput.files =
-                    droppedFiles;
-
-
-                filesInput.dispatchEvent(
-                    new Event("change")
-                );
-            }
-        }
-    );
-}
-
-
-/* =====================================================
-   UPLOAD / PROCESS DOCUMENTS
-===================================================== */
-
-const uploadButton =
-    $("uploadBtn");
-
-
-if (uploadButton) {
-
-    uploadButton.onclick =
-        async () => {
-
-            const files =
-                filesInput.files;
-
-
-            if (!files.length) {
-
-                alert(
-                    "Please select PDF files first."
-                );
-
-                return;
-            }
-
-
-            uploadButton.disabled = true;
-
-            $("status").textContent =
-                "Processing...";
-
-            $("uploadMsg").textContent =
-                "Uploading and indexing documents...";
-
-
-            const formData =
-                new FormData();
-
-
-            for (const file of files) {
-
-                formData.append(
-                    "files",
-                    file
-                );
-            }
-
-
-            try {
-
-                const response =
-                    await fetch(
-                        "/api/upload",
-                        {
-                            method: "POST",
-                            body: formData
-                        }
-                    );
-
-
-                const data =
-                    await response.json();
-
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        data.detail ||
-                        "Upload failed."
-                    );
-                }
-
-
-                const uploaded =
-                    data.uploaded || [];
-
-
-                $("uploadMsg").textContent =
-                    `Processed ${uploaded.length} document(s) successfully.`;
-
-
-                filesInput.value = "";
-
-                $("selectedFiles").textContent =
-                    "";
-
-
-                await refresh();
-
-
-            } catch (error) {
-
-                console.error(
-                    "Upload error:",
-                    error
-                );
-
-
-                $("uploadMsg").textContent =
-                    "Upload failed.";
-
-
-                alert(
-                    error.message
-                );
-
-
-            } finally {
-
-                uploadButton.disabled = false;
-
-                $("status").textContent =
-                    "Ready";
-            }
-        };
-}
-
-
-/* =====================================================
-   INVESTIGATION
-===================================================== */
-
-const askButton =
-    $("askBtn");
-
-
-if (askButton) {
-
-    askButton.onclick =
-        async () => {
-
-            const question =
-                $("question")
-                    .value
-                    .trim();
-
-
-            if (!question) {
-
-                alert(
-                    "Please enter a question."
-                );
-
-                return;
-            }
-
-
-            askButton.disabled = true;
-
-            $("status").textContent =
-                "Investigating...";
-
-
-            $("result").innerHTML = `
-
-                <div class="answer">
-
-                    <b>✦ INVESTIGATOR</b>
-
-                    <p>
-                        Searching your evidence library...
-                    </p>
-
-                </div>
-
-            `;
-
-
-            try {
-
-                const response =
-                    await fetch(
-                        "/api/ask",
-                        {
-                            method: "POST",
-
-                            headers: {
-                                "Content-Type":
-                                    "application/json"
-                            },
-
-                            body: JSON.stringify({
-                                question: question
-                            })
-                        }
-                    );
-
-
-                const data =
-                    await response.json();
-
-
-                console.log(
-                    "API RESPONSE:",
-                    data
-                );
-
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        data.detail ||
-                        "Investigation failed."
-                    );
-                }
-
-
-                /*
-                 * Backend structure:
-                 *
-                 * {
-                 *   success: true,
-                 *   result: {
-                 *      answer,
-                 *      sources,
-                 *      conflict,
-                 *      uncertainty
-                 *   }
-                 * }
-                 */
-
-                const result =
-                    data.result;
-
-
-                if (!result) {
-
-                    throw new Error(
-                        "No investigation result returned."
-                    );
-                }
-
-
-                renderResult(
-                    result
-                );
-
-
-            } catch (error) {
-
-                console.error(
-                    "Investigation error:",
-                    error
-                );
-
-
-                $("result").innerHTML = `
-
-                    <div class="warn">
-
-                        <b>
-                            Investigation failed
-                        </b>
-
-                        <br><br>
-
-                        ${escapeHtml(
-                            error.message
-                        )}
-
-                    </div>
-
-                `;
-
-
-            } finally {
-
-                askButton.disabled = false;
-
-                $("status").textContent =
-                    "Ready";
-            }
-        };
-}
-
-
-/* =====================================================
-   RENDER RESULT
-===================================================== */
-
-function renderResult(result) {
+    if (!answerContainer) {
+        return;
+    }
 
     const answer =
-        result.answer ||
+        data.answer ||
+        data.result ||
         "No answer returned.";
 
-
-    const sources =
-        Array.isArray(result.sources)
-            ? result.sources
-            : [];
-
-
-    let html = `
-
-        <div class="answer">
-
-            <b>✦ INVESTIGATOR ANSWER</b>
-
-            <div style="
-                margin-top:12px;
-                line-height:1.8;
-            ">
-
-                ${formatAnswer(answer)}
-
-            </div>
-
+    answerContainer.innerHTML = `
+        <div class="answer-title">
+            ✦ INVESTIGATOR ANSWER
         </div>
 
+        <div class="answer-body">
+            ${formatAnswer(answer)}
+        </div>
     `;
 
+    renderSources(data);
 
-    /* =================================================
-       CONFLICT
-    ================================================= */
+    renderConflict(data);
 
-    if (result.conflict) {
-
-        const conflict =
-            result.conflict;
-
-
-        html += `
-
-            <div class="warn">
-
-                <b>
-                    ⚠ ${escapeHtml(
-                        conflict.title ||
-                        "Conflict detected"
-                    )}
-                </b>
-
-                <br><br>
-
-                ${escapeHtml(
-                    conflict.message ||
-                    "Different values were found in the supporting documents."
-                )}
-
-        `;
-
-
-        if (
-            conflict.values &&
-            conflict.values.length
-        ) {
-
-            html += `
-
-                <div style="
-                    display:flex;
-                    flex-wrap:wrap;
-                    gap:8px;
-                    margin-top:12px;
-                ">
-
-            `;
-
-
-            conflict.values.forEach(
-                value => {
-
-                    html += `
-
-                        <span style="
-                            padding:7px 11px;
-                            border-radius:8px;
-                            background:#3a2b13;
-                            border:1px solid #6d4b18;
-                            color:#f3d58d;
-                            font-weight:700;
-                        ">
-                            ${escapeHtml(value)}
-                        </span>
-
-                    `;
-                }
-            );
-
-
-            html += `</div>`;
-        }
-
-
-        if (conflict.documents) {
-
-            html += `
-                <div style="
-                    margin-top:12px;
-                    line-height:1.7;
-                ">
-            `;
-
-
-            Object.entries(
-                conflict.documents
-            ).forEach(
-                ([document, values]) => {
-
-                    html += `
-
-                        <div>
-                            • ${escapeHtml(document)}
-                            → ${escapeHtml(
-                                values.join(", ")
-                            )}
-                        </div>
-
-                    `;
-                }
-            );
-
-
-            html += `</div>`;
-        }
-
-
-        html += `</div>`;
-    }
-
-
-    /* =================================================
-       UNCERTAINTY
-    ================================================= */
-
-    if (result.uncertainty) {
-
-        html += `
-
-            <div class="warn">
-
-                <b>
-                    ◇ ${escapeHtml(
-                        result.uncertainty.title ||
-                        "Uncertainty detected"
-                    )}
-                </b>
-
-                <br><br>
-
-                ${escapeHtml(
-                    result.uncertainty.message ||
-                    "The available evidence may not be sufficient."
-                )}
-
-            </div>
-
-        `;
-    }
-
-
-    /* =================================================
-       SOURCES
-    ================================================= */
-
-    html += `
-
-        <div class="answer">
-
-            <b>
-                ◈ EVIDENCE & SOURCES
-            </b>
-
-    `;
-
-
-    if (!sources.length) {
-
-        html += `
-
-            <p class="muted">
-                No matching evidence found.
-            </p>
-
-        `;
-
-    } else {
-
-        sources.forEach(
-            source => {
-
-                html += `
-
-                    <div class="source">
-
-                        <b>
-                            ▣ ${escapeHtml(
-                                source.doc ||
-                                "Document"
-                            )}
-                        </b>
-
-                        <span>
-                            — Page ${escapeHtml(
-                                source.page ||
-                                "?"
-                            )}
-                        </span>
-
-                        <br><br>
-
-                        ${escapeHtml(
-                            source.text ||
-                            ""
-                        )}
-
-                    </div>
-
-                `;
-            }
-        );
-    }
-
-
-    html += `</div>`;
-
-
-    $("result").innerHTML =
-        html;
+    renderUncertainty(data);
 }
 
-
-/* =====================================================
-   FORMAT ANSWER
-===================================================== */
+/* =========================
+   ANSWER FORMATTER
+========================= */
 
 function formatAnswer(answer) {
 
-    return String(answer)
+    if (!answer) {
+        return "No answer returned.";
+    }
+
+    const text = String(answer);
+
+    const lines = text
         .split("\n")
-        .filter(line => line.trim())
-        .map(line => {
+        .map(line => line.trim())
+        .filter(Boolean);
 
-            const clean =
-                line.replace(
-                    /^•\s*/,
-                    ""
-                );
+    if (lines.length === 1) {
+        return `<p>${escapeHtml(lines[0])}</p>`;
+    }
 
+    return lines.map(line => {
+
+        if (
+            line.startsWith("•") ||
+            line.startsWith("-") ||
+            line.startsWith("*")
+        ) {
 
             return `
+                <div class="answer-point">
+                    ${escapeHtml(line)}
+                </div>
+            `;
+        }
 
-                <div style="
-                    margin:8px 0;
-                ">
+        return `
+            <p>${escapeHtml(line)}</p>
+        `;
 
-                    <span style="
-                        color:#a978ff;
-                        font-weight:700;
-                    ">
-                        •
+    }).join("");
+}
+
+/* =========================
+   SOURCES
+========================= */
+
+function renderSources(data) {
+
+    const sourceContainer =
+        $("sources");
+
+    if (!sourceContainer) {
+        return;
+    }
+
+    const results =
+        data.sources ||
+        data.evidence ||
+        data.results ||
+        [];
+
+    if (!Array.isArray(results) || results.length === 0) {
+
+        sourceContainer.innerHTML = `
+            <div class="muted">
+                No matching evidence found.
+            </div>
+        `;
+
+        return;
+    }
+
+    sourceContainer.innerHTML = results
+        .slice(0, 10)
+        .map(item => {
+
+            const document =
+                item.doc ||
+                item.document ||
+                item.filename ||
+                "Unknown document";
+
+            const page =
+                item.page ||
+                item.page_number ||
+                "?";
+
+            const text =
+                item.text ||
+                item.content ||
+                "";
+
+            return `
+                <div class="source">
+
+                    <b>
+                        ${escapeHtml(document)}
+                    </b>
+
+                    <span>
+                        Page ${escapeHtml(page)}
                     </span>
 
-                    ${escapeHtml(clean)}
+                    ${
+                        text
+                            ? `<p>${escapeHtml(text)}</p>`
+                            : ""
+                    }
 
                 </div>
-
             `;
+
         })
         .join("");
 }
 
+/* =========================
+   CONFLICT
+========================= */
 
-/* =====================================================
+function renderConflict(data) {
+
+    const container =
+        $("conflict");
+
+    if (!container) {
+        return;
+    }
+
+    const conflict =
+        data.conflict ||
+        data.conflicts;
+
+    if (!conflict) {
+
+        container.innerHTML = "";
+
+        return;
+    }
+
+    if (typeof conflict === "string") {
+
+        container.innerHTML = `
+            <div class="warn">
+                ⚠ ${escapeHtml(conflict)}
+            </div>
+        `;
+
+        return;
+    }
+
+    const message =
+        conflict.message ||
+        "Different values or statements were found across the uploaded documents.";
+
+    const values =
+        conflict.values ||
+        conflict.amounts ||
+        [];
+
+    const documents =
+        conflict.documents ||
+        conflict.by_document ||
+        {};
+
+    container.innerHTML = `
+        <div class="warn">
+
+            <strong>⚠ Conflict detected</strong>
+
+            <p>
+                ${escapeHtml(message)}
+            </p>
+
+            ${
+                values.length
+                    ? `
+                        <div class="conflict-values">
+                            ${values.map(value => `
+                                <span>
+                                    ${escapeHtml(value)}
+                                </span>
+                            `).join("")}
+                        </div>
+                    `
+                    : ""
+            }
+
+            ${
+                Object.keys(documents).length
+                    ? `
+                        <div class="conflict-documents">
+                            ${Object.entries(documents)
+                                .map(([doc, value]) => `
+                                    <div>
+                                        • ${escapeHtml(doc)}
+                                        → ${escapeHtml(value)}
+                                    </div>
+                                `)
+                                .join("")}
+                        </div>
+                    `
+                    : ""
+            }
+
+        </div>
+    `;
+}
+
+/* =========================
+   UNCERTAINTY
+========================= */
+
+function renderUncertainty(data) {
+
+    const container =
+        $("uncertainty");
+
+    if (!container) {
+        return;
+    }
+
+    const uncertainty =
+        data.uncertainty ||
+        data.warning;
+
+    if (!uncertainty) {
+
+        container.innerHTML = "";
+
+        return;
+    }
+
+    const message =
+        typeof uncertainty === "string"
+            ? uncertainty
+            : uncertainty.message ||
+              "The available evidence may be incomplete.";
+
+    container.innerHTML = `
+        <div class="warn">
+            <strong>⚠ Uncertainty</strong>
+            <p>${escapeHtml(message)}</p>
+        </div>
+    `;
+}
+
+/* =========================
+   HISTORY
+========================= */
+
+function saveHistory(question, data) {
+
+    const item = {
+        question,
+        answer:
+            data?.answer ||
+            data?.result ||
+            "No answer returned.",
+        timestamp: new Date().toLocaleString()
+    };
+
+    investigationHistory.unshift(item);
+
+    investigationHistory =
+        investigationHistory.slice(0, 20);
+
+    localStorage.setItem(
+        "docxray_history",
+        JSON.stringify(investigationHistory)
+    );
+
+    renderHistory();
+}
+
+function loadHistory() {
+
+    try {
+
+        investigationHistory =
+            JSON.parse(
+                localStorage.getItem(
+                    "docxray_history"
+                ) || "[]"
+            );
+
+    } catch {
+
+        investigationHistory = [];
+    }
+
+    renderHistory();
+}
+
+function renderHistory() {
+
+    const container =
+        $("historyList");
+
+    if (!container) {
+        return;
+    }
+
+    if (!investigationHistory.length) {
+
+        container.innerHTML = `
+            <div class="empty">
+                <div class="empty-icon">◷</div>
+                <strong>No investigations yet</strong>
+                <span>Your recent questions will appear here.</span>
+            </div>
+        `;
+
+        return;
+    }
+
+    container.innerHTML =
+        investigationHistory
+            .map((item, index) => `
+                <div class="history-item">
+
+                    <div>
+                        <strong>
+                            ${escapeHtml(item.question)}
+                        </strong>
+
+                        <span>
+                            ${escapeHtml(item.timestamp)}
+                        </span>
+                    </div>
+
+                    <button
+                        type="button"
+                        onclick="reuseHistory(${index})"
+                    >
+                        Reuse
+                    </button>
+
+                </div>
+            `)
+            .join("");
+}
+
+function reuseHistory(index) {
+
+    const item =
+        investigationHistory[index];
+
+    if (!item) {
+        return;
+    }
+
+    setQuestion(item.question);
+}
+
+/* =========================
+   CLEAR WORKSPACE
+========================= */
+
+const clearButton = $("clearWorkspace");
+
+if (clearButton) {
+
+    clearButton.addEventListener(
+        "click",
+        async () => {
+
+            const confirmed = confirm(
+                "Clear all uploaded documents and workspace data?"
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/api/reset",
+                        {
+                            method: "POST"
+                        }
+                    );
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Could not clear workspace"
+                    );
+                }
+
+                await refresh();
+
+                setStatus(
+                    "Workspace cleared"
+                );
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert(
+                    "Could not clear workspace.\n\n" +
+                    error.message
+                );
+            }
+        }
+    );
+}
+
+/* =========================
+   KEYBOARD SHORTCUT
+========================= */
+
+const questionInput =
+    $("question");
+
+if (questionInput) {
+
+    questionInput.addEventListener(
+        "keydown",
+        (event) => {
+
+            if (
+                event.ctrlKey &&
+                event.key === "Enter"
+            ) {
+
+                event.preventDefault();
+
+                askQuestion();
+            }
+        }
+    );
+}
+
+/* =========================
+   GLOBAL FUNCTIONS
+========================= */
+
+window.setQuestion = setQuestion;
+window.showSection = showSection;
+window.removeDocument = removeDocument;
+window.reuseHistory = reuseHistory;
+window.askQuestion = askQuestion;
+
+/* =========================
    INITIAL LOAD
-===================================================== */
+========================= */
 
-window.setQuestion =
-    setQuestion;
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
 
+        loadHistory();
+        refresh();
 
-window.removeDocument =
-    removeDocument;
+        // Set Overview active initially
+        const overviewButton =
+            document.querySelector(
+                '.nav[data-target="overview"]'
+            );
 
-
-refresh();
+        if (overviewButton) {
+            overviewButton.classList.add("active");
+        }
+    }
+);
