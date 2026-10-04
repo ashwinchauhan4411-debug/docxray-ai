@@ -38,6 +38,7 @@ function setQuestion(question) {
 ========================= */
 
 function showSection(targetId) {
+
     const target = document.getElementById(targetId);
 
     if (!target) {
@@ -45,19 +46,24 @@ function showSection(targetId) {
         return;
     }
 
-    // Remove active state
+    // Remove active state from all sidebar buttons
     document.querySelectorAll(".nav").forEach((button) => {
         button.classList.remove("active");
     });
 
-    // Activate correct sidebar button
-    const activeButton = document.querySelector(
-        `.nav[data-target="${targetId}"]`
-    );
+    // Find clicked button based on onclick target
+    document.querySelectorAll(".nav").forEach((button) => {
+        const text = button.textContent.trim().toLowerCase();
 
-    if (activeButton) {
-        activeButton.classList.add("active");
-    }
+        if (
+            (targetId === "overview" && text.includes("overview")) ||
+            (targetId === "documents" && text.includes("documents")) ||
+            (targetId === "investigation" && text.includes("investigation")) ||
+            (targetId === "history" && text.includes("history"))
+        ) {
+            button.classList.add("active");
+        }
+    });
 
     // Scroll to section
     target.scrollIntoView({
@@ -65,6 +71,7 @@ function showSection(targetId) {
         block: "start"
     });
 }
+
 
 /* Sidebar buttons */
 document.querySelectorAll(".nav").forEach((button) => {
